@@ -28,6 +28,7 @@ package com.templeosrs.util.collections;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import static java.lang.Math.round;
+import java.util.Arrays;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -103,6 +104,8 @@ public class SyncButtonManager
 	@Setter
 	private boolean fullSyncRequested = false;
 
+	private boolean wikiSyncEnabled = false;
+
 	public void startUp()
 	{
 		eventBus.register(this);
@@ -174,9 +177,11 @@ public class SyncButtonManager
 			return;
 		}
 
+		// If WikiSync is enabled, account for button offset
+		final int wikiSyncOffset = wikiSyncEnabled ? 71 + 5 : 0;
 		final int w = BUTTON_WIDTH;
 		final int h = searchButton.getOriginalHeight();
-		final int x = BUTTON_OFFSET;
+		final int x = BUTTON_OFFSET + wikiSyncOffset;
 		final int y = searchButton.getOriginalY();
 		final int cornerDim = 9;
 
@@ -187,28 +192,33 @@ public class SyncButtonManager
 			.setPos(x, y)
 			.setSize(w, h)
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
-			.setYPositionMode(searchButton.getYPositionMode());
+			.setYPositionMode(searchButton.getYPositionMode())
+			.setName("TempleOSRS");
 
 		spriteWidgets[1] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[1])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(cornerDim, cornerDim)
-			.setPos(x + (w - cornerDim), y);
+			.setPos(x + (w - cornerDim), y)
+			.setName("TempleOSRS");
 		spriteWidgets[2] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[2])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(cornerDim, cornerDim)
-			.setPos(x, y);
+			.setPos(x, y)
+			.setName("TempleOSRS");
 		spriteWidgets[3] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[3])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(cornerDim, cornerDim)
-			.setPos(x + (w - cornerDim), y + h - cornerDim);
+			.setPos(x + (w - cornerDim), y + h - cornerDim)
+			.setName("TempleOSRS");
 		spriteWidgets[4] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[4])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(cornerDim, cornerDim)
-			.setPos(x, y + h - cornerDim);
+			.setPos(x, y + h - cornerDim)
+			.setName("TempleOSRS");
 		// Left and right edges
 		int sideWidth = 9;
 		int sideHeight = 4;
@@ -216,12 +226,14 @@ public class SyncButtonManager
 			.setSpriteId(SPRITE_IDS_INACTIVE[5])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(sideWidth, sideHeight)
-			.setPos(x + (w - sideWidth), y + cornerDim);
+			.setPos(x + (w - sideWidth), y + cornerDim)
+			.setName("TempleOSRS");
 		spriteWidgets[7] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[7])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(sideWidth, sideHeight)
-			.setPos(x, y + cornerDim);
+			.setPos(x, y + cornerDim)
+			.setName("TempleOSRS");
 
 		// Top and bottom edges
 		int topWidth = 42;
@@ -230,18 +242,21 @@ public class SyncButtonManager
 			.setSpriteId(SPRITE_IDS_INACTIVE[6])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(topWidth, topHeight)
-			.setPos(x + cornerDim, y);
+			.setPos(x + cornerDim, y)
+			.setName("TempleOSRS");
 		spriteWidgets[8] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SPRITE_IDS_INACTIVE[8])
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(topWidth, topHeight)
-			.setPos(x + cornerDim, y + h - topHeight);
+			.setPos(x + cornerDim, y + h - topHeight)
+			.setName("TempleOSRS");
 		// Refresh icon
 		spriteWidgets[9] = parent.createChild(-1, WidgetType.GRAPHIC)
 			.setSpriteId(SpriteID.UNKNOWN_WHITE_REFRESH_ARROWS)
 			.setXPositionMode(WidgetPositionMode.ABSOLUTE_RIGHT)
 			.setSize(13, 13)
-			.setPos(x + 6, y + 4);
+			.setPos(x + 6, y + 4)
+			.setName("TempleOSRS");
 
 
 		for (int i = 0; i < 10; i++)
@@ -259,7 +274,8 @@ public class SyncButtonManager
 			.setYTextAlignment(WidgetTextAlignment.CENTER)
 			.setPos(x - 8, y)
 			.setSize(w, h)
-			.setYPositionMode(searchButton.getYPositionMode());
+			.setYPositionMode(searchButton.getYPositionMode())
+			.setName("TempleOSRS");
 		text.revalidate();
 
 		// We'll give the text layer the listeners since it covers the whole area
@@ -301,7 +317,21 @@ public class SyncButtonManager
 			Widget parent = client.getWidget(screen.getParentId());
 			if (parent != null)
 			{
-				parent.deleteAllChildren();
+				Widget[] children = parent.getChildren();
+				if (children == null || children.length == 0)
+				{
+					continue;
+				}
+
+				// WikiSync will have already deleted our "TempleOSRS" named widgets if it was enabled, so track that
+				wikiSyncEnabled = Arrays.stream(children)
+					.noneMatch(widget -> widget != null && "TempleOSRS".equals(widget.getName()));
+
+				// only delte the child widgets if WikiSync didn't already
+				if (!wikiSyncEnabled)
+				{
+					parent.deleteAllChildren();
+				}
 				parent.revalidate();
 			}
 		}
